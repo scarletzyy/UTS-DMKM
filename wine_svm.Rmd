@@ -1,0 +1,104 @@
+---
+title: "wine_svm"
+author: '221810220'
+date: "10/27/2020"
+output: html_document
+---
+
+### Load Library
+```{r message=FALSE, warning=FALSE}
+library(caTools) 
+library(tidyverse)
+library(e1071)
+library(caret)
+```
+
+### Load Data
+```{r}
+wine <- read.csv("C:/Users/User/Downloads/wine.data", header=FALSE, sep = ",")
+head(wine)
+```
+
+### Mengubah atribut target menjadi faktor 
+```{r}
+wine$V1 = factor(wine$V1) 
+str(wine)
+```
+
+### Scatter Plot
+Scatterplot untuk  melihat hubungan V2, V14, dan V1 dari data wine.
+```{r}
+qplot(V2, V14, color = V1, data=wine)
+```
+
+### Membagi dataset menjadi Training set dan Test set 
+```{r}
+set.seed(123) 
+split = sample.split(wine$V1, SplitRatio = 0.80) 
+  
+training_set = subset(wine, split == TRUE) 
+test_set = subset(wine, split == FALSE) 
+
+print(paste("Jumlah data dalam training set :", nrow(training_set)))
+print(paste("Jumlah data dalam test set :", nrow(test_set)))
+```
+
+
+### Buat Model
+```{r}
+modelSVM <- svm(V1~., data=wine)
+summary(modelSVM)
+```
+
+Support vector kernel default adalah bertipe radial. Terdapat beberapa pilihan yaitu sigmoid, polynomial, dan linear.
+
+
+### SVM Classification Plot
+Karena terdapat lebih dari 3 variabel pada dataset ini, perlu didefinisikan variabel mana yang akan ditampilkan, pada kasus ini V5 dan V7.
+```{r}
+plot(modelSVM, data=wine,
+     V2~V14,
+     slice= list(V3 = 0,
+                 V4 = 0))
+```
+
+### Confusion Matrix
+```{r}
+pred <- predict(modelSVM, wine)
+confusionMatrix(table(Predicted = pred, Actual=wine$V1))
+```
+
+### Mencari Model Terbaik
+```{r}
+set.seed(123)
+carimodel <- tune(svm, V1~., data=wine,
+                     ranges = list(epsilon = seq(0,1,0.1),
+                     cost = 2^(2:9)))
+carimodel
+```
+
+Perhatikan nilai cost, jika cost yang ditentukan bernilai besar, bisa terjadi over-fitting, jika terlalu kecil bisa terjadi under-fitting yang berakibat rendahnya akurasi.
+
+
+#### Performance of SVM Plot
+```{r}
+plot(carimodel)
+```
+
+#### Summary
+```{r}
+summary(carimodel)
+```
+
+Didapat model terbaik adalah model dengan epsilon 0 dan cost 4.
+```{r}
+bestmodel <- carimodel$best.model
+summary(bestmodel)
+```
+
+#### Confusion Matrix Best Model
+```{r}
+pred <- predict(bestmodel, wine)
+confusionMatrix(table(Predicted = pred, Actual=wine$V1))
+```
+
